@@ -1,0 +1,152 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>Dragon Nest</title>
+    <style type="text/css">
+
+    .clearfix {clear: both}
+    #right-column {
+        float: right;
+        width: 40%;
+        min-height: 100px;
+        /*width: 150px;*/
+        height: 400px;
+        overflow: auto;
+    }
+    </style>
+
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/0.9.16/socket.io.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+    $(document).ready(function() {
+        namespace = '/cave'; // change to an empty string to use the global namespace
+
+        // the socket.io documentation recommends sending an explicit package upon connection
+        // this is specially important when using the global namespace
+        var socket = io.connect('http://' + document.domain + ':' + location.port + namespace);
+        socket.on('connect', function() {
+            socket.emit('my event', {
+                data: 'Welcome!'
+            });
+            return false;
+        });
+        socket.on('disconnect', function(reason) {
+            console.log('User 1 disconnected because ' + reason);
+            return false;
+        });
+
+        // event handler for server sent data
+        // the data is displayed in the "Received" section of the page
+        socket.on('my response', function(msg) {
+            $('#log').append('<br>Received #' + msg.count + ': ' + msg.data);
+            return false;
+        });
+
+        socket.on('battle response', function(msg) {
+            $('#insider').append('<br>Received #' + msg.count + ': ' + msg.data);
+            var height=$("#insider").height();
+            $('#right-column').animate({scrollTop:height}, 'slow');
+            return false;
+        });
+        // handlers for the different forms in the page
+        // these send data to the server in a variety of ways
+        $('form#emit').submit(function(event) {
+            socket.emit('my event', {
+                data: $('#emit_data').val()
+            });
+            return false;
+        });
+        $('form#broadcast').submit(function(event) {
+            socket.emit('my broadcast event', {
+                data: $('#broadcast_data').val()
+            });
+            return false;
+        });
+        $('form#start').submit(function(event) {
+            socket.emit('start battle', {
+                room: $('#start_battle').val()
+            });
+            return false;
+        });
+        $('form#leave').submit(function(event) {
+            socket.emit('leave');
+            return false;
+        });
+        $('form#send_room').submit(function(event) {
+            socket.emit('sent to room', {
+                // room: $('#room_name').val(),
+                data: $('#room_data').val()
+            });
+            return false;
+        });
+        $('form#close').submit(function(event) {
+            socket.emit('close room', {
+                room: $('#close_room').val()
+            });
+            return false;
+        });
+        $('form#disconnect').submit(function(event) {
+            socket.emit('disconnect request');
+            return false;
+        });
+        $('form#search').submit(function(event) {
+            socket.emit('search', {
+                dragon: $('#dragon_name').val(),
+            });
+            return false;
+        });
+    });
+    </script>
+</head>
+
+<body>
+    <!-- <h1>Flask-SocketIO Test</h1> -->
+    <div id="right-column">
+    <div id="insider"></div>
+    </div>
+    <h2>Send:</h2>
+    <form id="emit" method="POST" action='#'>
+        <input type="text" name="emit_data" id="emit_data" placeholder="Message">
+        <input type="submit" value="Echo">
+    </form>
+    <form id="search" method="POST" action='#'>
+        <select name="dragon_name" id="dragon_name">
+            <option disabled>Выберите героя</option>
+            <option value="Valakas">Valakas</option>
+            <option value="Shester">Shester</option>
+            <option value="Blower">Blower</option>
+        </select>
+        <!-- <input type="text" name="search_data" id="search_data" placeholder="Search"> -->
+        <input type="submit" value="Search">
+    </form>
+    <!--     </form>
+        <form id="broadcast" method="POST" action='#'>
+        <input type="text" name="broadcast_data" id="broadcast_data" placeholder="Message">
+        <input type="submit" value="Broadcast">
+    </form> -->
+    <form id="start" method="POST" action='#'>
+        <!-- <input type="text" name="start_battle" id="start_battle" placeholder="Battle"> -->
+        <input type="submit" value="Start Battle">
+    </form>
+    <form id="leave" method="POST" action='#'>
+        <input type="submit" value="Leave Room">
+    </form>
+    <form id="send_room" method="POST" action='#'>
+        <!--         <input type="text" name="room_name" id="room_name" placeholder="Room Name"> -->
+        <input type="text" name="room_data" id="room_data" placeholder="Message">
+        <input type="submit" value="Send to Room">
+    </form>
+    <!--     <form id="close" method="POST" action="#">
+        <input type="text" name="close_room" id="close_room" placeholder="Room Name">
+        <input type="submit" value="Close Room">
+    </form> -->
+    <form id="disconnect" method="POST" action="#">
+        <input type="submit" value="Disconnect">
+    </form>
+    <h2>Receive:</h2>
+    <div id="log"></div>
+    
+</body>
+
+</html>
