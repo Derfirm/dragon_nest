@@ -10,7 +10,7 @@ class Dragon(object):
         self.health = health
         self.attack = attack
 
-    def dragon_attack(self, dragon_atk_chance):
+    def check_dragon_attack(self, dragon_atk_chance):
         if dragon_atk_chance >= random.random():
             return True
         return False

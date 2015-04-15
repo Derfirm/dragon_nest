@@ -12,28 +12,43 @@ from threading import Thread
 import functools
 import random
 
-from flask_debugtoolbar import DebugToolbarExtension
-from flask_redis import Redis
-from flask import request
 from flask.ext.login import current_user
-from flask import Flask, render_template, session#, request
+from flask.ext.login import LoginManager
+from flask.ext.mongoengine import MongoEngine, MongoEngineSessionInterface
+# from flask_debugtoolbar import DebugToolbarExtension
+from flask_redis import Redis
+from flask import Flask, render_template, session, request
 from flask.ext.socketio import SocketIO, emit, join_room, leave_room, \
     close_room, disconnect
 
+lm = LoginManager()
 app = Flask(__name__)
+lm.init_app(app)
 app.debug = True
 app.config['SECRET_KEY'] = 'secret!'
-# app.config['DEBUG_TB_PANELS'] = ['flask.ext.mongoengine.panels.MongoDebugPanel']
 socketio = SocketIO(app)
 
+app.config.from_pyfile('mongo.cfg')
+
+from models import db
+db.init_app(app)
 # Redis(app, 'REDIS_LINKS')
 # Redis(app, 'REDIS_CONTENT')
 redis_store = Redis(app)
-# toolbar = DebugToolbarExtension(app)
+app.session_interface = MongoEngineSessionInterface(db)
 
 thread = None
 # gl_dragon = None
 gl_battle = None
+
+def authenticated_only(f):
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated():
+            request.namespace.disconnect()
+        else:
+            return f(*args, **kwargs)
+    return wrapped
 
 def is_finish(battle):
     if battle and (battle.dragon.health <= 0 or battle.finish):
@@ -65,7 +80,7 @@ def background_battle(count, battle):
                       {'data': "Dragon kill all heroes!", 'count': count},
                       namespace='/cave')
 
-    if dragon.dragon_attack(0.3):
+    if dragon.check_dragon_attack(0.3):
         target = random.choice(ppl)
         target.health -= dragon.attack
 
@@ -113,6 +128,8 @@ def index():
     #     thread.start()
     return render_template('index.html')
 
+
+
 def searching_room(dragon):
     room_key = 'room:{dragon}'.format(dragon=dragon)
     return redis_store.smembers(room_key)
@@ -120,6 +137,7 @@ def searching_room(dragon):
 
 @socketio.on('my event', namespace='/cave')
 def cave_message(message):
+    print current_user
     session['receive_count'] = session.get('receive_count', 0) + 1
     emit('my response',
          {'data': message['data'], 'count': session['receive_count']})
