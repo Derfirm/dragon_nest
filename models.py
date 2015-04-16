@@ -6,10 +6,10 @@ from flask.ext.mongoengine import MongoEngine
 
 db = MongoEngine()
 
-ROLE_USER = 0
-ROLE_ADMIN = 1
+class MongoUser(db.Document):
 
-class User(db.Document):
+    meta = {'allow_inheritance': True}
+
     email = db.StringField(required=True)
     nickname = db.StringField(max_length=50, unique = True)
 
@@ -27,3 +27,16 @@ class User(db.Document):
 
     def get_id(self):
         return unicode(self.id)
+
+    @classmethod
+    def get(cls, email):
+        try:
+            return cls.objects.get(email=email)
+        except:
+            return cls(email=email).save()
+
+class Battle(db.Document):
+    dragon = db.StringField(max_length=50)
+    ppl = db.StringField(max_length=50)
+    started = db.BooleanField(default=False)
+    finish = db.BooleanField(default=False)

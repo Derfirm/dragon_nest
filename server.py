@@ -1,4 +1,7 @@
-#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+__version_info__ = ('0', '0', '1')
+__version__ = '.'.join(__version_info__)
 
 from gevent import monkey
 monkey.patch_all()
@@ -11,19 +14,20 @@ from core import Battle
 from threading import Thread
 import functools
 import random
+from models import MongoUser
 
-from flask.ext.login import current_user
-from flask.ext.login import LoginManager
+from flask.ext.login import current_user, login_user
+from flask.ext.login import LoginManager, UserMixin
 from flask.ext.mongoengine import MongoEngine, MongoEngineSessionInterface
 # from flask_debugtoolbar import DebugToolbarExtension
 from flask_redis import Redis
-from flask import Flask, render_template, session, request
+from flask import Flask, render_template, session, request, make_response
 from flask.ext.socketio import SocketIO, emit, join_room, leave_room, \
     close_room, disconnect
 
-lm = LoginManager()
 app = Flask(__name__)
-lm.init_app(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
 app.debug = True
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
@@ -40,6 +44,27 @@ app.session_interface = MongoEngineSessionInterface(db)
 thread = None
 # gl_dragon = None
 gl_battle = None
+
+class User(MongoUser,UserMixin):
+    # proxy for a database of users
+    pass
+
+
+@login_manager.request_loader
+def load_user(request):
+    token = request.headers.get('Authorization')
+    if token is None:
+        token = request.args.get('token')
+ 
+    if token is not None:
+        username,password = token.split(":") # naive token
+        user_entry = User.get(username)
+        if (user_entry is not None):
+            user = User(user_entry[0],user_entry[1])
+            if (user.password == password):
+                return user
+    return None
+
 
 def authenticated_only(f):
     @functools.wraps(f)
@@ -142,6 +167,20 @@ def cave_message(message):
     emit('my response',
          {'data': message['data'], 'count': session['receive_count']})
 
+@socketio.on('auth', namespace='/cave')
+def auth(message):
+    name = message['data']
+    user = User.get('Andrew')
+    pow_1 = login_user(user)
+    session["a"] = "hello session"
+    session.modified = True
+    app.save_session(session, make_response('dummy'))
+    print app.session_interface.cls.objects.count()
+    # data = db.session.query(User).filter_by(nickname='Andrew').first()
+    # print db.session
+    session['receive_count'] = session.get('receive_count', 0) + 1
+    emit('my response',
+         {'data': message['data'], 'count': session['receive_count']})
 
 @socketio.on('search', namespace='/cave')
 def search_room(message):

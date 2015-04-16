@@ -15,8 +15,8 @@ class Dragon(object):
             return True
         return False
 
-    def dragon_skill(self):
+    def check_dragon_skill(self):
         pass
 
-    def dragon_fury(self):
+    def check_dragon_fury(self):
         pass

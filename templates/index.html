@@ -57,6 +57,7 @@
             });
             return false;
         });
+
         $('form#broadcast').submit(function(event) {
             socket.emit('my broadcast event', {
                 data: $('#broadcast_data').val()
@@ -71,6 +72,13 @@
         });
         $('form#leave').submit(function(event) {
             socket.emit('leave');
+            return false;
+        });
+
+        $('form#auth').submit(function(event) {
+            socket.emit('auth',{
+                 data: $('#auth_data').val()
+            });
             return false;
         });
         $('form#send_room').submit(function(event) {
@@ -119,6 +127,10 @@
         </select>
         <!-- <input type="text" name="search_data" id="search_data" placeholder="Search"> -->
         <input type="submit" value="Search">
+    </form>
+    <form id="auth" method="POST" action='#'>
+        <input type="text" name="auth_data" id="auth_data" placeholder="Protected echo">
+        <input type="submit" value="Send">
     </form>
     <!--     </form>
         <form id="broadcast" method="POST" action='#'>
